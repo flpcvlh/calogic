@@ -1,0 +1,172 @@
+/* Importação da fonte Poppins do Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
+/* Reset e configurações globais */
+* {
+    font-family: 'Poppins', sans-serif !important;
+}
+
+/* Background principal escuro */
+.stApp {
+    background-color: #0a0a0a !important;
+    background-image: radial-gradient(circle at 20% 50%, rgba(163, 255, 18, 0.05) 0%, transparent 50%),
+                      radial-gradient(circle at 80% 80%, rgba(163, 255, 18, 0.03) 0%, transparent 50%);
+}
+
+/* Sidebar estilizado */
+[data-testid="stSidebar"] {
+    background-color: #111111 !important;
+    border-right: 1px solid rgba(163, 255, 18, 0.2);
+}
+
+[data-testid="stSidebar"] h1, 
+[data-testid="stSidebar"] h2, 
+[data-testid="stSidebar"] h3 {
+    color: #a3ff12 !important;
+    font-weight: 600;
+}
+
+/* Botões customizados (estilo Cannoli) */
+.stButton > button {
+    background: linear-gradient(135deg, #a3ff12 0%, #8fd610 100%) !important;
+    color: #0a0a0a !important;
+    font-weight: 600 !important;
+    border: none !important;
+    border-radius: 12px !important;
+    padding: 0.75rem 2rem !important;
+    font-size: 1rem !important;
+    transition: all 0.3s ease !important;
+    box-shadow: 0 4px 15px rgba(163, 255, 18, 0.3) !important;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.stButton > button:hover {
+    background: linear-gradient(135deg, #8fd610 0%, #a3ff12 100%) !important;
+    box-shadow: 0 6px 25px rgba(163, 255, 18, 0.5) !important;
+    transform: translateY(-2px) !important;
+}
+
+/* Cards de métricas (st.metric) */
+[data-testid="stMetricValue"] {
+    font-size: 2.5rem !important;
+    font-weight: 700 !important;
+    color: #a3ff12 !important;
+}
+
+[data-testid="stMetricLabel"] {
+    font-size: 1rem !important;
+    color: #cccccc !important;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+div[data-testid="metric-container"] {
+    background: linear-gradient(135deg, #1a1a1a 0%, #151515 100%);
+    border: 1px solid rgba(163, 255, 18, 0.2);
+    border-radius: 16px;
+    padding: 1.5rem;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+/* Títulos principais */
+h1, h2, h3 {
+    color: #ffffff !important;
+    font-weight: 600 !important;
+}
+
+h1 {
+    font-size: 3rem !important;
+    background: linear-gradient(135deg, #ffffff 0%, #a3ff12 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* Inputs e selects */
+.stTextInput > div > div > input,
+.stSelectbox > div > div > select {
+    background-color: #1a1a1a !important;
+    color: #ffffff !important;
+    border: 1px solid rgba(163, 255, 18, 0.3) !important;
+    border-radius: 8px !important;
+    padding: 0.75rem !important;
+}
+
+.stTextInput > div > div > input:focus,
+.stSelectbox > div > div > select:focus {
+    border-color: #a3ff12 !important;
+    box-shadow: 0 0 0 2px rgba(163, 255, 18, 0.2) !important;
+}
+
+/* Dataframes */
+.stDataFrame {
+    border: 1px solid rgba(163, 255, 18, 0.2) !important;
+    border-radius: 12px !important;
+    overflow: hidden;
+}
+
+/* Container de login centralizado */
+.login-container {
+    max-width: 450px;
+    margin: 10vh auto;
+    padding: 3rem;
+    background: linear-gradient(135deg, #1a1a1a 0%, #0f0f0f 100%);
+    border: 2px solid rgba(163, 255, 18, 0.3);
+    border-radius: 24px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6), 
+                0 0 80px rgba(163, 255, 18, 0.1);
+}
+
+.login-title {
+    text-align: center;
+    font-size: 3rem;
+    font-weight: 700;
+    color: #a3ff12;
+    margin-bottom: 2rem;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+}
+
+/* Tabs */
+.stTabs [data-baseweb="tab-list"] {
+    gap: 2rem;
+}
+
+.stTabs [data-baseweb="tab"] {
+    background-color: transparent;
+    border-bottom: 3px solid transparent;
+    color: #cccccc;
+    font-weight: 500;
+    padding: 1rem 2rem;
+}
+
+.stTabs [aria-selected="true"] {
+    border-bottom-color: #a3ff12 !important;
+    color: #a3ff12 !important;
+}
+
+/* Plotly graphs */
+.js-plotly-plot {
+    border-radius: 16px;
+    overflow: hidden;
+}
+
+/* Scrollbar customizado */
+::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background: #0a0a0a;
+}
+
+::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, #a3ff12 0%, #8fd610 100%);
+    border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #a3ff12;
+}
