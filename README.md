@@ -29,20 +29,20 @@
 
 <h3>👨‍💻 Integrantes:</h3>
 <ul>
-  <li><b>Anderson Yavi Fernandez</b> – RA: 24025678</li>
-  <li><b>Gabriel Gonçalves Pires</b> – RA: 24026518</li>
-  <li><b>Isabela Nunes Zeferino</b> – RA: 24026460</li>
-  <li><b>Kaique Neres de Oliveira</b> – RA: 24026134</li>
-  <li><b>Luiz Felipe Galdino de Carvalho</b> – RA: 24026568</li>
+  <li><b><a href="https://www.linkedin.com/in/luizfelipegcarvalho/">Luiz Felipe Galdino de Carvalho</a></b> – RA: 24026568</li>
+  <li><b><a href="https://www.linkedin.com/in/gabriel-pires-2082b473/">Gabriel Gonçalves Pires</a></b> – RA: 24026518</li>
+  <li><b><a href="https://www.linkedin.com/in/isabela-nunes-zeferino/">Isabela Nunes Zeferino</a></b> – RA: 24026460</li>
+  <li><b><a href="https://www.linkedin.com/in/kaique-neres-0413a8265/">Kaique Neres de Oliveira</a></b> – RA: 24026134</li>
+  <li><b><a href="https://www.linkedin.com/in/luizfelipegcarvalho/">Luiz Felipe Galdino de Carvalho</a></b> – RA: 24026568</li>
 </ul>
 
 <h3>🧑‍🏫 Professores Orientadores:</h3>
 <ul>
   <li>Prof. Aimar Martins Lopes</li>
+  <li>Prof. Edson Barbero</li>
   <li>Prof. Eduardo Savino</li>
   <li>Prof. Lucy Mari</li>
-  <li>Prof. Ronaldo</li>
-  <li>Prof. Edson Barbeiro</li>
+  <li>Prof. Ronaldo Araujo</li>
 </ul>
 
 <hr>
