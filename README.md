@@ -91,29 +91,48 @@ O <b>CALOGIC</b> é uma plataforma de <b>inteligência de dados</b> desenvolvida
 <h2>📁 Estrutura do Projeto</h2>
 
 <pre>
-Backend/calogic
+Raiz/
 │
-├── 📄 app.py                          # Dashboard principal com login e visão geral 3D
-├── 📄 setup_db.py                     # ETL - Carrega dados do CSV para PostgreSQL
-├── 📄 ml_engine.py                    # Motor de ML - Calcula RFM e aplica K-Means
-├── 📄 verificar_clusters.py           # Script de validação dos clusters
+├── 📂 documentos/
+│   ├── Entrega 1/
+│   ├── Entrega 2/
+│   └── Documentação.docx
 │
-├── 📂 pages/                          # Páginas do dashboard por cluster
-│   ├── 1_🏆_Campeoes.py              # Análise e campanhas para Campeões
-│   ├── 2_💎_Fieis.py                 # Análise e campanhas para Fiéis
-│   ├── 3_⚠️_Em_Risco.py              # Análise e campanhas para Em Risco
-│   └── 4_💔_Perdidos.py               # Análise e campanhas para Perdidos
+├── 📂 executáveis/
+│   └── src/
+│       ├── backend/
+│       └── frontend/
 │
-├── 📂 data/                           # Dados brutos
-│   └── mock_orders_for_rfm.csv        # Dados de pedidos (formato CSV)
+├── 📂 imagens/
 │
-├── 📂 .streamlit/                     # Configurações do Streamlit
-│   ├── config.toml                    # Configurações visuais
-│   └── secrets.toml                   # Credenciais (NÃO versionar!)
+├── 📂 src/
+│   │
+│   ├── 📂 Backend/calogic/
+│   │   │
+│   │   ├── 📄 app.py                      # Dashboard principal (login + 3D)
+│   │   ├── 📄 setup_db.py                 # ETL - CSV → PostgreSQL
+│   │   ├── 📄 ml_engine.py                # Motor ML (RFM + K-Means)
+│   │   ├── 📄 verificar_clusters.py       # Validação dos clusters
+│   │   ├── 📄 style.css                   # Estilos customizados
+│   │   ├── 📄 requirements.txt            # Dependências Python
+│   │   │
+│   │   ├── 📂 pages/                      # Páginas por cluster
+│   │   │   ├── 1_🏆_Campeoes.py
+│   │   │   ├── 2_💎_Fieis.py
+│   │   │   ├── 3_⚠️_Em_Risco.py
+│   │   │   └── 4_💔_Perdidos.py
+│   │   │
+│   │   ├── 📂 data/
+│   │   │   └── mock_orders_for_rfm.csv    # Dados de pedidos
+│   │   │
+│   │   └── 📂 .streamlit/
+│   │       ├── config.toml                # Config visual
+│   │       └── secrets.toml               # Credenciais (não versionar!)
+│   │
+│   └── 📂 Frontend/
+│       └── (Em desenvolvimento)
 │
-├── 📄 style.css                       # Estilos customizados
-├── 📄 requirements.txt                # Dependências Python
-└── 📄 README.md                       # Documentação (este arquivo)
+└── 📄 README.md                            # Este arquivo
 </pre>
 
 <hr>
