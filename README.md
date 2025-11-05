@@ -223,7 +223,7 @@ http://localhost:8501
 <h3>💾 Banco de Dados</h3>
 <div style="display: flex; gap: 10px; flex-wrap: wrap;">
   <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/postgresql/postgresql-original.svg" width="50" height="50" alt="PostgreSQL" />
-  <img src="https://images.seeklogo.com/logo-png/48/1/neon-logo-png_seeklogo-482126.png" width="50" height="50" alt="Neon" />
+  <img src="https://ml.globenewswire.com/Resource/Download/82e79fc7-1654-41e7-af70-f5857596743c" width="50" height="50" alt="Neon" />
 </div>
 
 <h3>🛠 Ferramentas & DevOps</h3>
