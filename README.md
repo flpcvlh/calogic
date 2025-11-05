@@ -223,7 +223,7 @@ http://localhost:8501
 <h3>💾 Banco de Dados</h3>
 <div style="display: flex; gap: 10px; flex-wrap: wrap;">
   <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/postgresql/postgresql-original.svg" width="50" height="50" alt="PostgreSQL" />
-  <img src="https://neon.tech/favicon/favicon.svg" width="50" height="50" alt="Neon" />
+  <img src="https://images.seeklogo.com/logo-png/48/1/neon-logo-png_seeklogo-482126.png" width="50" height="50" alt="Neon" />
 </div>
 
 <h3>🛠 Ferramentas & DevOps</h3>
@@ -376,13 +376,14 @@ Consulte o arquivo <code>LICENSE</code> para mais detalhes.
   <li><a href="https://scikit-learn.org/stable/modules/clustering.html#k-means">Scikit-learn K-Means Documentation</a></li>
   <li><a href="https://streamlit.io/docs">Streamlit Documentation</a></li>
   <li><a href="https://plotly.com/python/">Plotly Python Documentation</a></li>
-  <li><a href="https://images.seeklogo.com/logo-png/48/1/neon-logo-png_seeklogo-482126.png">Readme Template</a></li>
+  <li><a href="https://neon.tech/docs">Neon PostgreSQL Documentation</a></li>
+  <li><a href="https://github.com/iuricode/readme-template">Readme Template</a></li>
 </ol>
 
 <hr>
 
 <p align="center">
-  <b>🍋 Desenvolvido com ❤️ pela Equipe CALOGIC | FECAP 2024</b>
+  <b>🍋 Desenvolvido pela Equipe CALOGIC | FECAP 2025 - ADS 4 </b>
 </p>
 
 </body>
