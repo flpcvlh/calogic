@@ -70,7 +70,7 @@ O <b>CALOGIC</b> é uma plataforma de <b>inteligência de dados</b> desenvolvida
 </ul>
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/streamlit/streamlit/develop/docs/_static/img/streamlit-mark-color.png" alt="CALOGIC Dashboard" width="600">
+  <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSyZhoGmwbbRJXqM8VcWHd-5nlbf7SAFGNJEQ&s" alt="CALOGIC Dashboard" width="600">
 </p>
 
 <hr>
@@ -91,7 +91,7 @@ O <b>CALOGIC</b> é uma plataforma de <b>inteligência de dados</b> desenvolvida
 <h2>📁 Estrutura do Projeto</h2>
 
 <pre>
-calogic/
+Backend/calogic
 │
 ├── 📄 app.py                          # Dashboard principal com login e visão geral 3D
 ├── 📄 setup_db.py                     # ETL - Carrega dados do CSV para PostgreSQL
