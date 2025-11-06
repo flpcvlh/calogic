@@ -1,262 +1,205 @@
 """
-ml_engine.py - Motor de Machine Learning para Segmentação RFM
-Calcula métricas RFM, aplica K-Means e salva resultados
-Execute uma vez após o setup_db.py
+Motor de Machine Learning - Análise RFM e K-Means Clustering
+Calogic - Sistema de Segmentação de Clientes
 """
 
 import pandas as pd
 import numpy as np
-from sqlalchemy import create_engine, text
 from sklearn.preprocessing import StandardScaler
 from sklearn.cluster import KMeans
-from pathlib import Path
+from sqlalchemy import create_engine, text
+import streamlit as st
 from datetime import datetime
 
-def load_secrets():
-    """Carrega as credenciais do arquivo secrets.toml"""
-    secrets_path = Path('.streamlit/secrets.toml')
-    
-    if not secrets_path.exists():
-        raise FileNotFoundError(
-            "❌ Arquivo .streamlit/secrets.toml não encontrado!\n"
-            "Certifique-se de criar o arquivo com a string de conexão NEON_DB_URL"
-        )
-    
-    secrets = {}
-    with open(secrets_path, 'r') as f:
-        for line in f:
-            line = line.strip()
-            if '=' in line and not line.startswith('#'):
-                key, value = line.split('=', 1)
-                key = key.strip()
-                value = value.strip().strip('"').strip("'")
-                secrets[key] = value
-    
-    return secrets
+print("\n" + "="*70)
+print("🤖 CALOGIC - MOTOR DE MACHINE LEARNING")
+print("="*70)
 
-def calculate_rfm_and_segment():
-    """Calcula RFM e executa clusterização K-Means"""
-    
-    print("🧠 Iniciando Motor de ML - Segmentação RFM...")
-    
-    # Carregar credenciais
-    try:
-        secrets = load_secrets()
-        db_url = secrets.get('NEON_DB_URL')
-        if not db_url:
-            raise ValueError("NEON_DB_URL não encontrado no secrets.toml")
-        print("✅ Credenciais carregadas do secrets.toml")
-    except Exception as e:
-        print(f"❌ Erro ao carregar credenciais: {e}")
-        return
-    
-    # Conexão com o banco
-    try:
-        engine = create_engine(db_url)
-        print("✅ Conexão com Neon estabelecida!")
-    except Exception as e:
-        print(f"❌ Erro ao conectar: {e}")
-        return
-    
-    # Ler dados do banco (apenas pedidos concluídos)
-    query = """
+# Conectar ao banco de dados
+print("\n📊 Conectando ao banco de dados...")
+engine = create_engine(st.secrets["NEON_DB_URL"])
+
+# Verificar se a tabela orders existe
+print("🔍 Verificando se a tabela 'orders' existe...")
+try:
+    with engine.connect() as conn:
+        result = conn.execute(text("SELECT COUNT(*) FROM orders"))
+        total_orders = result.fetchone()[0]
+        print(f"✅ Tabela 'orders' encontrada com {total_orders} pedidos!")
+except Exception as e:
+    print(f"\n❌ ERRO: Tabela 'orders' não encontrada!")
+    print(f"Detalhes: {e}")
+    print("\n💡 SOLUÇÃO: Execute primeiro: python setup_db.py")
+    exit()
+
+# Calcular RFM diretamente da tabela orders
+print("\n🔬 Calculando métricas RFM dos pedidos...")
+
+# Data de referência (hoje)
+reference_date = datetime.now()
+print(f"📅 Data de referência: {reference_date.strftime('%Y-%m-%d')}")
+
+# Query para calcular RFM
+rfm_query = f"""
+WITH customer_metrics AS (
     SELECT 
         customer,
-        created_at,
-        total_amount,
-        status
+        MAX(created_at) as last_order_date,
+        COUNT(*) as total_orders,
+        SUM(total_amount) as total_spent
     FROM orders
-    WHERE status = 'CONCLUDED'
-    """
-    
-    try:
-        df = pd.read_sql(query, engine)
-        print(f"✅ {len(df)} pedidos CONCLUDED carregados")
-        print(f"📊 Clientes únicos: {df['customer'].nunique()}")
-        
-        # DEBUG: Mostrar amostra dos dados
-        print(f"\n🔍 Amostra dos dados carregados:")
-        print(df.head())
-        print(f"\n📊 Tipos de dados:")
-        print(df.dtypes)
-        
-    except Exception as e:
-        print(f"❌ Erro ao ler dados: {e}")
-        print("💡 Certifique-se de que executou 'python setup_db.py' primeiro")
-        return
-    
-    # Converter data
-    df['created_at'] = pd.to_datetime(df['created_at'], errors='coerce')
-    
-    # Tratar total_amount - pode estar como string ou ter vírgula como decimal
-    print("\n🔧 Tratando coluna total_amount...")
-    
-    # Se for string, substituir vírgula por ponto
-    if df['total_amount'].dtype == 'object':
-        print("  ⚠️  total_amount é string, convertendo...")
-        df['total_amount'] = df['total_amount'].astype(str).str.replace(',', '.', regex=False)
-    
-    # Converter para numérico
-    df['total_amount'] = pd.to_numeric(df['total_amount'], errors='coerce')
-    
-    print(f"  📊 Valores não-nulos: {df['total_amount'].notna().sum()}")
-    print(f"  ❌ Valores nulos: {df['total_amount'].isna().sum()}")
-    print(f"  📈 Valores > 0: {(df['total_amount'] > 0).sum()}")
-    
-    # Se todos os valores forem nulos, há um problema no CSV
-    if df['total_amount'].isna().all():
-        print("\n❌ ERRO: Todos os valores de total_amount são nulos!")
-        print("💡 Verifique o formato do CSV. Execute: python debug_csv.py")
-        return
-    
-    # Remover linhas com total_amount nulo ou zero
-    df_original = len(df)
-    df = df[df['total_amount'].notna() & (df['total_amount'] > 0)]
-    print(f"✅ Após limpeza: {len(df)} pedidos válidos (removidos {df_original - len(df)})")
-    
-    if len(df) == 0:
-        print("\n❌ ERRO: Nenhum pedido válido após limpeza!")
-        print("💡 Verifique o arquivo CSV e execute novamente o setup_db.py")
-        return
-    
-    # Data de referência (última compra + 1 dia)
-    reference_date = df['created_at'].max() + pd.Timedelta(days=1)
-    print(f"📅 Data de referência: {reference_date}")
-    
-    # Calcular RFM
-    print("\n📊 Calculando métricas RFM...")
-    rfm = df.groupby('customer').agg({
-        'created_at': lambda x: (reference_date - x.max()).days,  # Recency
-        'status': 'count',  # Frequency
-        'total_amount': 'sum'  # Monetary
-    }).reset_index()
-    
-    rfm.columns = ['customer', 'recency', 'frequency', 'monetary']
-    
-    # Remover qualquer linha com valores nulos
-    rfm_original_count = len(rfm)
-    rfm = rfm.dropna()
-    
-    if len(rfm) < rfm_original_count:
-        print(f"⚠️  {rfm_original_count - len(rfm)} clientes removidos por dados incompletos")
-    
-    print(f"✅ RFM calculado para {len(rfm)} clientes")
-    
-    if len(rfm) == 0:
-        print("\n❌ ERRO: Nenhum cliente após cálculo RFM!")
-        return
-    
-    # Estatísticas RFM
-    print("\n📊 Estatísticas RFM:")
-    print(rfm[['recency', 'frequency', 'monetary']].describe())
-    
-    # Preparar dados para clustering
-    X = rfm[['recency', 'frequency', 'monetary']].values
-    
-    # Normalização
-    scaler = StandardScaler()
-    X_scaled = scaler.fit_transform(X)
-    print("\n✅ Dados normalizados com StandardScaler")
-    
-    # Elbow Method (para justificar k=4)
-    inertias = []
-    K_range = range(2, min(11, len(rfm)))  # Garantir que k não seja maior que n_samples
-    
-    print("\n📈 Calculando Elbow Method...")
-    for k in K_range:
-        kmeans = KMeans(n_clusters=k, random_state=42, n_init=10)
-        kmeans.fit(X_scaled)
-        inertias.append(kmeans.inertia_)
-        print(f"  k={k}: inertia={kmeans.inertia_:.2f}")
-    
-    # Salvar dados do Elbow para o app
-    elbow_df = pd.DataFrame({'k': list(K_range), 'inertia': inertias})
-    
-    # K-Means com k=4 (ou menos se não houver clientes suficientes)
-    k_clusters = min(4, len(rfm) - 1)
-    print(f"\n🎯 Executando K-Means com k={k_clusters}...")
-    kmeans = KMeans(n_clusters=k_clusters, random_state=42, n_init=10)
-    rfm['cluster'] = kmeans.fit_predict(X_scaled)
-    
-    print("✅ Clusterização concluída!")
-    print(f"\n📊 Distribuição dos clusters:")
-    print(rfm['cluster'].value_counts().sort_index())
-    
-    # Análise dos clusters
-    print("\n📊 Perfil dos Clusters:")
-    cluster_profile = rfm.groupby('cluster').agg({
-        'recency': 'mean',
-        'frequency': 'mean',
-        'monetary': 'mean'
-    }).round(2)
-    cluster_profile['count'] = rfm.groupby('cluster').size()
-    print(cluster_profile)
-    
-    # Criar tabela de segmentos no banco
-    with engine.connect() as conn:
-        # Drop table if exists
-        print("\n🗑️  Removendo tabela antiga 'customer_segments' (se existir)...")
-        conn.execute(text("DROP TABLE IF EXISTS customer_segments"))
-        conn.commit()
-        
-        # Criar tabela
-        print("📦 Criando tabela 'customer_segments'...")
-        create_table_query = """
-        CREATE TABLE customer_segments (
-            customer_id VARCHAR(100) PRIMARY KEY,
-            recency INT,
-            frequency INT,
-            monetary DECIMAL(10, 2),
-            cluster_id INT
-        )
-        """
-        conn.execute(text(create_table_query))
-        conn.commit()
-        print("✅ Tabela 'customer_segments' criada")
-    
-    # Salvar resultados
-    rfm_to_save = rfm[['customer', 'recency', 'frequency', 'monetary', 'cluster']].copy()
-    rfm_to_save.columns = ['customer_id', 'recency', 'frequency', 'monetary', 'cluster_id']
-    
-    print(f"\n💾 Salvando {len(rfm_to_save)} segmentos...")
-    rfm_to_save.to_sql('customer_segments', engine, if_exists='append', index=False)
-    print(f"✅ {len(rfm_to_save)} segmentos salvos na tabela 'customer_segments'!")
-    
-    # Salvar dados do Elbow
-    with engine.connect() as conn:
-        print("\n🗑️  Removendo tabela antiga 'elbow_data' (se existir)...")
-        conn.execute(text("DROP TABLE IF EXISTS elbow_data"))
-        conn.commit()
-        
-        print("📦 Criando tabela 'elbow_data'...")
-        create_elbow_query = """
-        CREATE TABLE elbow_data (
-            k INT,
-            inertia DECIMAL(10, 2)
-        )
-        """
-        conn.execute(text(create_elbow_query))
-        conn.commit()
-    
-    print("💾 Salvando dados do Elbow Method...")
-    elbow_df.to_sql('elbow_data', engine, if_exists='append', index=False)
-    print("✅ Dados do Elbow Method salvos!")
-    
-    print("\n" + "="*60)
-    print("🎉 SEGMENTAÇÃO CONCLUÍDA COM SUCESSO!")
-    print("="*60)
-    print("\n💡 Próximo passo: Execute 'streamlit run app.py'")
-    print("\n📊 Resumo:")
-    print(f"   • {len(rfm_to_save)} clientes segmentados")
-    print(f"   • {len(rfm['cluster'].unique())} clusters criados")
-    print(f"   • Tabelas criadas: customer_segments, elbow_data")
-    print("\n✅ Tudo pronto para o dashboard!\n")
+    WHERE total_amount IS NOT NULL
+    GROUP BY customer
+)
+SELECT 
+    customer as customer_id,
+    EXTRACT(DAY FROM (TIMESTAMP '{reference_date}' - last_order_date))::INTEGER as recency,
+    total_orders as frequency,
+    total_spent as monetary
+FROM customer_metrics
+WHERE total_spent > 0
+ORDER BY customer
+"""
 
-if __name__ == "__main__":
-    try:
-        calculate_rfm_and_segment()
-    except Exception as e:
-        print(f"\n❌ ERRO CRÍTICO: {e}")
-        import traceback
-        print("\n📋 Detalhes do erro:")
-        traceback.print_exc()
+print("📥 Executando query RFM...")
+df = pd.read_sql(rfm_query, engine)
+
+if len(df) == 0:
+    print("\n❌ ERRO: Nenhum cliente encontrado com pedidos válidos!")
+    print("💡 Verifique se há pedidos com total_amount válido na tabela orders")
+    exit()
+
+print(f"✅ {len(df)} clientes carregados com sucesso!")
+
+# Validação dos dados
+print("\n🔍 Validando dados...")
+print(f"   - Valores nulos: {df.isnull().sum().sum()}")
+print(f"   - Duplicatas: {df.duplicated().sum()}")
+
+if df.isnull().sum().sum() > 0:
+    print("⚠️  Removendo valores nulos...")
+    df = df.dropna()
+
+# Estatísticas básicas
+print("\n📊 Estatísticas RFM:")
+print(df[['recency', 'frequency', 'monetary']].describe())
+
+# Preparar features para clustering
+print("\n🔬 Preparando features para clustering...")
+X = df[['recency', 'frequency', 'monetary']].values
+
+# Normalizar dados
+print("📐 Normalizando dados com StandardScaler...")
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
+
+# Aplicar K-Means
+print("\n🎯 Aplicando K-Means Clustering...")
+print("   Número de clusters: 4")
+print("   Algoritmo: K-Means++")
+print("   Max iterações: 300")
+
+kmeans = KMeans(
+    n_clusters=4,
+    init='k-means++',
+    n_init=10,
+    max_iter=300,
+    random_state=42
+)
+
+df['cluster_id'] = kmeans.fit_predict(X_scaled)
+
+print(f"✅ Clustering concluído!")
+print(f"   Inércia: {kmeans.inertia_:.2f}")
+
+# ====== MAPEAMENTO CORRETO DOS CLUSTERS ======
+print("\n🔄 Aplicando mapeamento correto dos clusters...")
+
+# Calcular médias por cluster ANTES do mapeamento
+cluster_means = df.groupby('cluster_id').agg({
+    'recency': 'mean',
+    'frequency': 'mean',
+    'monetary': 'mean'
+}).round(2)
+
+print("\n📊 Médias ANTES do remapeamento:")
+print(cluster_means)
+
+# Criar score RFM (quanto MAIOR, MELHOR o cluster)
+cluster_means['score'] = (
+    (1 / (cluster_means['recency'] + 1)) * 1000 +  # Recência baixa = bom
+    cluster_means['frequency'] * 10 +               # Frequência alta = bom
+    cluster_means['monetary'] / 100                 # Valor alto = bom
+)
+
+print("\n📈 Scores calculados:")
+print(cluster_means[['score']].sort_values('score', ascending=False))
+
+# Ordenar clusters por score (do MELHOR pro PIOR)
+cluster_means = cluster_means.sort_values('score', ascending=False)
+
+# Criar mapeamento CORRETO
+# O cluster com MAIOR score vira 0 (Campeões)
+# O cluster com MENOR score vira 3 (Perdidos)
+cluster_mapping = {}
+for i, cluster_original in enumerate(cluster_means.index):
+    cluster_mapping[cluster_original] = i
+
+print("\n🔄 Mapeamento aplicado:")
+cluster_names = {0: "🏆 Campeões", 1: "💎 Fiéis", 2: "⚠️ Em Risco", 3: "💔 Perdidos"}
+for old, new in cluster_mapping.items():
+    print(f"   Cluster K-Means {old} → Cluster Final {new} ({cluster_names[new]})")
+
+# Aplicar o mapeamento
+df['cluster_id'] = df['cluster_id'].map(cluster_mapping)
+
+print("\n✅ Clusters remapeados com sucesso!")
+
+# Verificar resultado final
+print("\n📊 Médias APÓS remapeamento:")
+final_summary = df.groupby('cluster_id').agg({
+    'recency': 'mean',
+    'frequency': 'mean',
+    'monetary': 'mean'
+}).round(2)
+print(final_summary)
+
+# Análise por cluster
+print("\n" + "="*70)
+print("📈 ANÁLISE DETALHADA POR CLUSTER")
+print("="*70)
+
+for cluster_id in [0, 1, 2, 3]:
+    cluster_df = df[df['cluster_id'] == cluster_id]
+    
+    print(f"\n{cluster_names[cluster_id]}:")
+    print(f"   Clientes: {len(cluster_df)} ({len(cluster_df)/len(df)*100:.1f}%)")
+    print(f"   Recência: {cluster_df['recency'].mean():.1f} dias")
+    print(f"   Frequência: {cluster_df['frequency'].mean():.2f} pedidos")
+    print(f"   Valor Médio: R$ {cluster_df['monetary'].mean():,.2f}")
+    print(f"   Receita Total: R$ {cluster_df['monetary'].sum():,.2f}")
+
+# Salvar no banco
+print("\n💾 Salvando resultados no banco de dados...")
+
+# Drop da tabela antiga se existir
+with engine.connect() as conn:
+    conn.execute(text("DROP TABLE IF EXISTS customer_segments"))
+    conn.commit()
+
+# Salvar nova tabela
+df.to_sql('customer_segments', engine, if_exists='replace', index=False)
+print("✅ Dados salvos na tabela 'customer_segments'!")
+
+# Estatísticas finais
+print("\n" + "="*70)
+print("📊 RESUMO FINAL")
+print("="*70)
+print(f"Total de clientes segmentados: {len(df)}")
+print(f"Receita total: R$ {df['monetary'].sum():,.2f}")
+print(f"Ticket médio geral: R$ {df['monetary'].mean():,.2f}")
+print(f"Frequência média geral: {df['frequency'].mean():.2f}")
+print(f"Recência média geral: {df['recency'].mean():.1f} dias")
+
+print("\n✅ Processamento concluído com sucesso!")
+print("="*70 + "\n")

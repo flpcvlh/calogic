@@ -118,27 +118,61 @@ with tab1:
     st.markdown("#### Há quanto tempo estão inativos?")
     st.markdown("*A maioria está inativa há mais de 6 meses*")
     
-    fig = px.histogram(df, x='recency', nbins=30,
-                      title="Distribuição do Tempo de Inatividade",
-                      color_discrete_sequence=['#ff3b30'])
+    # Criar distribuição agrupada
+    recency_counts = df.groupby(pd.cut(df['recency'], bins=15)).size().reset_index()
+    recency_counts.columns = ['range', 'count']
+    recency_counts['midpoint'] = recency_counts['range'].apply(lambda x: x.mid)
     
-    fig.add_vline(x=rec_avg, line_dash="dash", line_color="white", line_width=2,
-                 annotation_text=f"Média: {rec_avg:.0f}d", annotation_position="top")
+    fig = go.Figure()
+    
+    # Linha suave com preenchimento
+    fig.add_trace(go.Scatter(
+        x=recency_counts['midpoint'],
+        y=recency_counts['count'],
+        mode='lines',
+        name='Clientes',
+        line=dict(color='#ff3b30', width=4, shape='spline'),
+        fill='tozeroy',
+        fillcolor='rgba(255, 59, 48, 0.3)'
+    ))
+    
+    # Linha da média
+    fig.add_vline(
+        x=rec_avg, 
+        line_dash="dash", 
+        line_color="white", 
+        line_width=3,
+        annotation_text=f"Média: {rec_avg:.0f} dias",
+        annotation_position="top right",
+        annotation=dict(font_size=14, bgcolor="rgba(255,59,48,0.8)", font_color="white")
+    )
     
     # Marcos temporais
-    fig.add_vline(x=180, line_dash="dot", line_color="#ffaa00", line_width=1,
+    fig.add_vline(x=180, line_dash="dot", line_color="#ffaa00", line_width=2,
                  annotation_text="6 meses", annotation_position="top left")
-    fig.add_vline(x=365, line_dash="dot", line_color="#ff6600", line_width=1,
+    fig.add_vline(x=365, line_dash="dot", line_color="#ff6600", line_width=2,
                  annotation_text="1 ano", annotation_position="top right")
     
     fig.update_layout(
+        title="Distribuição do Tempo de Inatividade",
         paper_bgcolor='rgba(0,0,0,0)',
         plot_bgcolor='rgba(26,26,26,0.9)',
-        font=dict(color='#ffffff'),
-        xaxis=dict(title="Dias inativo", gridcolor='#333'),
-        yaxis=dict(title="Clientes", gridcolor='#333'),
+        font=dict(color='#ffffff', size=13),
+        xaxis=dict(
+            title="Dias inativo",
+            gridcolor='#333',
+            showgrid=True,
+            zeroline=False
+        ),
+        yaxis=dict(
+            title="Clientes",
+            gridcolor='#333',
+            showgrid=True,
+            zeroline=False
+        ),
         showlegend=False,
-        height=400
+        height=450,
+        hovermode='x unified'
     )
     
     st.plotly_chart(fig, use_container_width=True)
@@ -146,15 +180,15 @@ with tab1:
     # Análise temporal
     muito_tempo = len(df[df['recency'] > 365])
     meses_6_12 = len(df[(df['recency'] > 180) & (df['recency'] <= 365)])
-    meses_3_6 = len(df[(df['recency'] <= 180)])
+    meses_3_6 = len(df[df['recency'] <= 180])
     
     col1, col2, col3 = st.columns(3)
     with col1:
-        st.metric("💔 3-6 meses", f"{meses_3_6} ({meses_3_6/len(df)*100:.1f}%)")
+        st.metric("💔 3-6 meses", f"{meses_3_6}", f"{meses_3_6/len(df)*100:.1f}%")
     with col2:
-        st.metric("💔💔 6-12 meses", f"{meses_6_12} ({meses_6_12/len(df)*100:.1f}%)")
+        st.metric("💔💔 6-12 meses", f"{meses_6_12}", f"{meses_6_12/len(df)*100:.1f}%")
     with col3:
-        st.metric("💔💔💔 +1 ano", f"{muito_tempo} ({muito_tempo/len(df)*100:.1f}%)")
+        st.metric("💔💔💔 +1 ano", f"{muito_tempo}", f"{muito_tempo/len(df)*100:.1f}%")
     
     if muito_tempo > len(df) * 0.5:
         st.error(f"🚨 Mais de 50% estão inativos há mais de 1 ano. Recuperação muito difícil.")
@@ -165,21 +199,55 @@ with tab2:
     st.markdown("#### Eles já foram bons clientes?")
     st.markdown("*Analisando o histórico de compras anterior*")
     
-    fig = px.histogram(df, x='frequency', nbins=15,
-                      title="Frequência de Compras Quando Eram Ativos",
-                      color_discrete_sequence=['#ff3b30'])
+    # Criar distribuição de frequência
+    freq_counts = df['frequency'].value_counts().sort_index().reset_index()
+    freq_counts.columns = ['frequency', 'count']
     
-    fig.add_vline(x=freq_avg, line_dash="dash", line_color="white", line_width=2,
-                 annotation_text=f"Média: {freq_avg:.1f}", annotation_position="top")
+    fig = go.Figure()
+    
+    # Linha suave com preenchimento
+    fig.add_trace(go.Scatter(
+        x=freq_counts['frequency'],
+        y=freq_counts['count'],
+        mode='lines+markers',
+        name='Clientes',
+        line=dict(color='#ff3b30', width=4, shape='spline'),
+        marker=dict(size=8, color='#ff3b30', line=dict(color='#0a0a0a', width=2)),
+        fill='tozeroy',
+        fillcolor='rgba(255, 59, 48, 0.3)'
+    ))
+    
+    # Linha da média
+    fig.add_vline(
+        x=freq_avg,
+        line_dash="dash",
+        line_color="white",
+        line_width=3,
+        annotation_text=f"Média: {freq_avg:.1f}",
+        annotation_position="top right",
+        annotation=dict(font_size=14, bgcolor="rgba(255,59,48,0.8)", font_color="white")
+    )
     
     fig.update_layout(
+        title="Frequência de Compras Quando Eram Ativos",
         paper_bgcolor='rgba(0,0,0,0)',
         plot_bgcolor='rgba(26,26,26,0.9)',
-        font=dict(color='#ffffff'),
-        xaxis=dict(title="Pedidos (quando ativos)", gridcolor='#333'),
-        yaxis=dict(title="Clientes", gridcolor='#333'),
+        font=dict(color='#ffffff', size=13),
+        xaxis=dict(
+            title="Pedidos (quando ativos)",
+            gridcolor='#333',
+            showgrid=True,
+            zeroline=False
+        ),
+        yaxis=dict(
+            title="Clientes",
+            gridcolor='#333',
+            showgrid=True,
+            zeroline=False
+        ),
         showlegend=False,
-        height=400
+        height=450,
+        hovermode='x unified'
     )
     
     st.plotly_chart(fig, use_container_width=True)
@@ -192,7 +260,7 @@ with tab2:
     with col1:
         st.metric("📊 Freq. Média Anterior", f"{freq_avg:.1f} pedidos")
     with col2:
-        st.metric("💎 Tinham ≥5 pedidos", f"{freq_alta_antes} ({freq_alta_antes/len(df)*100:.1f}%)")
+        st.metric("💎 Tinham ≥5 pedidos", f"{freq_alta_antes}", f"{freq_alta_antes/len(df)*100:.1f}%")
     
     if freq_alta_antes > 0:
         st.info(f"💡 {freq_alta_antes} clientes tinham bom histórico. Vale tentar reativar!")
@@ -204,23 +272,58 @@ with tab3:
     st.markdown("#### Quanto valor foi perdido?")
     st.markdown("*Receita histórica que não retorna mais*")
     
+    # Criar bins de valor
+    valor_bins = pd.qcut(df['monetary'], q=20, duplicates='drop')
+    valor_counts = df.groupby(valor_bins).size().reset_index()
+    valor_counts.columns = ['range', 'count']
+    valor_counts['midpoint'] = valor_counts['range'].apply(lambda x: x.mid)
+    valor_counts = valor_counts.sort_values('midpoint')
+    
     fig = go.Figure()
     
-    fig.add_trace(go.Box(
-        y=df['monetary'],
-        name="Valor",
-        marker_color='#ff3b30',
-        boxmean='sd'
+    # Linha suave com preenchimento gradiente
+    fig.add_trace(go.Scatter(
+        x=valor_counts['midpoint'],
+        y=valor_counts['count'],
+        mode='lines',
+        name='Clientes',
+        line=dict(color='#ff3b30', width=4, shape='spline'),
+        fill='tozeroy',
+        fillcolor='rgba(255, 59, 48, 0.3)'
     ))
+    
+    # Linha da média
+    fig.add_vline(
+        x=mon_avg,
+        line_dash="dash",
+        line_color="white",
+        line_width=3,
+        annotation_text=f"Média: R$ {mon_avg:,.0f}",
+        annotation_position="top left",
+        annotation=dict(font_size=14, bgcolor="rgba(255,59,48,0.8)", font_color="white")
+    )
     
     fig.update_layout(
         title="Valor Histórico dos Clientes Perdidos",
         paper_bgcolor='rgba(0,0,0,0)',
         plot_bgcolor='rgba(26,26,26,0.9)',
-        font=dict(color='#ffffff'),
-        yaxis=dict(title="Valor (R$)", gridcolor='#333'),
+        font=dict(color='#ffffff', size=13),
+        xaxis=dict(
+            title="Valor (R$)",
+            gridcolor='#333',
+            showgrid=True,
+            zeroline=False,
+            tickformat=',.0f'
+        ),
+        yaxis=dict(
+            title="Clientes",
+            gridcolor='#333',
+            showgrid=True,
+            zeroline=False
+        ),
         showlegend=False,
-        height=400
+        height=450,
+        hovermode='x unified'
     )
     
     st.plotly_chart(fig, use_container_width=True)
@@ -271,17 +374,21 @@ fig = px.scatter(
     height=500
 )
 
-# Zona de prioridade
+# Zona de prioridade (dinâmica)
+prioridade_rec = df['recency'].quantile(0.5)  # 50% menor recência
+prioridade_mon = df['monetary'].quantile(0.75)  # 25% maior valor
+
 fig.add_shape(
     type="rect",
-    x0=0, y0=df['monetary'].quantile(0.75),
-    x1=365, y1=df['monetary'].max() * 1.1,
+    x0=0, y0=prioridade_mon,
+    x1=prioridade_rec, y1=df['monetary'].max() * 1.1,
     line=dict(color="#ffaa00", width=3, dash="dash"),
     fillcolor="rgba(255, 170, 0, 0.1)"
 )
 
 fig.add_annotation(
-    x=180, y=df['monetary'].quantile(0.85),
+    x=prioridade_rec/2, 
+    y=prioridade_mon + (df['monetary'].max() - prioridade_mon)/2,
     text="🎯 PRIORIDADE<br>Alto valor + Menos tempo inativo",
     showarrow=False,
     font=dict(color="#ffaa00", size=13, family="Arial Black"),
@@ -300,8 +407,8 @@ fig.update_layout(
 
 st.plotly_chart(fig, use_container_width=True)
 
-prioridade = len(df[(df['recency'] < 365) & (df['monetary'] > df['monetary'].quantile(0.75))])
-st.info(f"🎯 {prioridade} clientes de alto valor com <1 ano inativo = FOCAR AQUI PRIMEIRO")
+prioridade = len(df[(df['recency'] < prioridade_rec) & (df['monetary'] > prioridade_mon)])
+st.info(f"🎯 {prioridade} clientes de alto valor com menor tempo inativo = FOCAR AQUI PRIMEIRO")
 
 st.markdown("---")
 
@@ -460,30 +567,83 @@ Se não quiser mais mensagens, é só avisar."""
                 st.success(f"✅ Push final enviado!")
     
     # ROI
-    st.markdown("---")
-    st.subheader("📊 ROI Estimado (Expectativa Conservadora)")
+st.markdown("---")
+st.subheader("📊 ROI Estimado (Última Tentativa)")
+
+conversoes = int(len(df) * 0.08)  # 8% conversão
+ticket_medio = df['monetary'].mean() / df['frequency'].mean() if df['frequency'].mean() > 0 else 120
+
+# CUSTOS
+custo_disparo = len(df) * 0.50
+custo_vale = conversoes * 50  # Vale R$ 50
+custo_desconto = conversoes * ticket_medio * 0.30  # 30% desconto
+custo_total = custo_disparo + custo_vale + custo_desconto
+
+# RECEITA
+receita_bruta = conversoes * ticket_medio
+margem_liquida = 0.60
+receita_liquida = receita_bruta * margem_liquida
+
+# LUCRO
+lucro = receita_liquida - custo_total
+roi = (lucro / custo_total) * 100 if custo_total > 0 else 0
+
+# LTV de longo prazo (justificativa se ROI negativo)
+ltv_3anos = conversoes * ticket_medio * 3  # 3 anos de compras
+lucro_ltv = (ltv_3anos * 0.60) - custo_total
+roi_ltv = (lucro_ltv / custo_total) * 100 if custo_total > 0 else 0
+
+col1, col2, col3, col4, col5 = st.columns(5)
+with col1:
+    st.metric("🎯 Taxa Conversão", "8%")
+with col2:
+    st.metric("🛒 Reativações", f"{conversoes:,}")
+with col3:
+    st.metric("💰 Receita Líquida", f"R$ {receita_liquida:,.2f}")
+with col4:
+    st.metric("💵 Lucro Curto Prazo", f"R$ {lucro:,.2f}")
+with col5:
+    st.metric("📈 ROI", f"{roi:.0f}%")
+
+with st.expander("📊 Ver Detalhamento Completo"):
+    st.markdown(f"""
+    ### 💸 Investimento: R$ {custo_total:,.2f}
     
-    conversoes = int(len(df) * 0.05)  # 5% conversão (muito conservador)
-    receita_estimada = conversoes * df['monetary'].mean() * 0.70  # 30% desconto
-    custo = len(df) * 0.50 + (50 * conversoes)  # Custo do vale
-    roi = ((receita_estimada - custo) / custo) * 100 if custo > 0 else 0
+    - 📧 Disparo: R$ {custo_disparo:,.2f}
+    - 🎁 Vale R$ 50: R$ {custo_vale:,.2f}
+    - 💰 Desconto 30%: R$ {custo_desconto:,.2f}
+    - 🚚 Frete grátis: Já incluído
     
-    col1, col2, col3, col4 = st.columns(4)
-    with col1:
-        st.metric("🎯 Taxa Conversão", "5%")
-    with col2:
-        st.metric("🛒 Reativações", f"{conversoes:,}")
-    with col3:
-        st.metric("💰 Receita", f"R$ {receita_estimada:,.2f}")
-    with col4:
-        if roi > 0:
-            st.metric("📈 ROI", f"{roi:.0f}%")
-        else:
-            st.metric("📈 ROI", "Breakeven")
+    ### 💰 Retorno Imediato
     
-    st.warning("⚠️ Taxa de conversão muito baixa esperada. Foco em clientes prioritários!")
+    - Vendas: R$ {receita_bruta:,.2f}
+    - Margem 60%: R$ {receita_liquida:,.2f}
+    - **Lucro**: R$ {lucro:,.2f}
+    - **ROI curto prazo**: {roi:.1f}%
     
-    if prioridade > 0:
-        st.info(f"💡 Recomendação: Focar nos {prioridade} clientes de alta prioridade primeiro!")
+    ---
     
-    st.error("💔 Se não responderem, considere remover da lista de comunicação ativa.")
+    ### 🔮 Projeção LTV (3 anos)
+    
+    - Vendas projetadas: R$ {ltv_3anos:,.2f}
+    - Lucro LTV: R$ {lucro_ltv:,.2f}
+    - **ROI LTV**: {roi_ltv:.0f}%
+    
+    ---
+    
+    ✅ Mesmo com ROI baixo no curto prazo, recuperar {conversoes} clientes justifica o investimento pelo LTV de longo prazo!
+    """)
+
+if roi > 20:
+    st.success(f"✅ ROI positivo de {roi:.0f}%! Campanha viável mesmo para perdidos!")
+elif roi > 0:
+    st.info(f"📊 ROI de {roi:.0f}%. Justificado pelo LTV de longo prazo ({roi_ltv:.0f}% em 3 anos).")
+elif roi > -30:
+    st.warning(f"⚠️ ROI de {roi:.0f}% no curto prazo, mas LTV de 3 anos compensa: {roi_ltv:.0f}%")
+else:
+    st.error(f"❌ ROI muito negativo: {roi:.0f}%. Focar APENAS em clientes prioritários.")
+
+if prioridade > 0:
+    st.success(f"🎯 Recomendação: Focar nos {prioridade} clientes de alta prioridade para maximizar ROI!")
+else:
+    st.warning("⚠️ Poucos clientes prioritários. Considerar não fazer campanha para este grupo.")

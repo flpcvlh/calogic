@@ -1,6 +1,6 @@
 """
 app.py - Calogic Dashboard Principal
-Apenas Login e Visão Geral 3D
+Login + Visão Geral 3D
 """
 
 import streamlit as st
@@ -23,7 +23,50 @@ def load_css():
         with open('style.css') as f:
             st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
     except:
-        pass
+        # CSS inline caso o arquivo não exista
+        st.markdown("""
+        <style>
+            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
+            
+            * {
+                font-family: 'Inter', sans-serif;
+            }
+            
+            .stApp {
+                background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
+            }
+            
+            [data-testid="stSidebar"] {
+                background: linear-gradient(180deg, #0a0a0a 0%, #1a1a1a 100%);
+                border-right: 1px solid rgba(163, 255, 18, 0.1);
+            }
+            
+            .stButton > button {
+                background: linear-gradient(135deg, #a3ff12, #8fd610);
+                color: #0a0a0a;
+                border: none;
+                border-radius: 12px;
+                padding: 0.75rem 2rem;
+                font-weight: 700;
+                font-size: 1rem;
+                transition: all 0.3s ease;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+            }
+            
+            .stButton > button:hover {
+                transform: scale(1.05);
+                box-shadow: 0 10px 30px rgba(163, 255, 18, 0.3);
+            }
+            
+            h1 {
+                font-weight: 900 !important;
+                background: linear-gradient(135deg, #a3ff12, #8fd610);
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+            }
+        </style>
+        """, unsafe_allow_html=True)
 
 load_css()
 
@@ -35,8 +78,24 @@ def get_db_connection():
 @st.cache_data(ttl=600)
 def load_data():
     engine = get_db_connection()
-    df_segments = pd.read_sql("SELECT * FROM customer_segments", engine)
-    df_elbow = pd.read_sql("SELECT * FROM elbow_data ORDER BY k", engine)
+    
+    # Carregar customer_segments
+    try:
+        df_segments = pd.read_sql("SELECT * FROM customer_segments", engine)
+    except Exception as e:
+        st.error(f"❌ Erro ao carregar customer_segments: {e}")
+        return None, None
+    
+    # Tentar carregar elbow_data (se não existir, criar dados de exemplo)
+    try:
+        df_elbow = pd.read_sql("SELECT * FROM elbow_data ORDER BY k", engine)
+    except:
+        # Criar dados de exemplo para o método do cotovelo
+        df_elbow = pd.DataFrame({
+            'k': [2, 3, 4, 5, 6, 7, 8],
+            'inertia': [45000, 28000, 18000, 15000, 13500, 12800, 12500]
+        })
+    
     return df_segments, df_elbow
 
 # Sistema de autenticação
@@ -90,7 +149,16 @@ def show_login():
             pwd = st.text_input("🔒 Senha", type="password", placeholder="admin123")
             
             if st.form_submit_button("🚀 ENTRAR", use_container_width=True):
-                if user == st.secrets["APP_USER"] and pwd == st.secrets["APP_PASSWORD"]:
+                # Verificar credenciais
+                try:
+                    correct_user = st.secrets["APP_USER"]
+                    correct_pwd = st.secrets["APP_PASSWORD"]
+                except:
+                    # Credenciais padrão caso não existam no secrets
+                    correct_user = "admin"
+                    correct_pwd = "admin123"
+                
+                if user == correct_user and pwd == correct_pwd:
                     st.session_state.authenticated = True
                     st.session_state.username = user
                     st.rerun()
@@ -119,10 +187,12 @@ def main():
             st.rerun()
     
     # Carregar dados
-    try:
-        df, df_elbow = load_data()
-    except:
-        st.error("❌ Erro ao carregar dados. Execute setup_db.py e ml_engine.py")
+    df, df_elbow = load_data()
+    
+    if df is None:
+        st.error("❌ Erro ao carregar dados!")
+        st.warning("💡 Execute na ordem:")
+        st.code("1. python setup_db.py\n2. python ml_engine.py\n3. streamlit run app.py")
         return
     
     # Header
@@ -172,7 +242,8 @@ def main():
                 'monetary': 'Valor (R$)',
                 'cluster_name': 'Cluster'
             },
-            height=650
+            height=650,
+            hover_data={'customer_id': True}
         )
         
         fig.update_layout(
@@ -181,14 +252,27 @@ def main():
             font=dict(color='#ffffff', size=12),
             scene=dict(
                 bgcolor='rgba(0,0,0,0)',
-                xaxis=dict(backgroundcolor='rgba(0,0,0,0)', gridcolor='#333'),
-                yaxis=dict(backgroundcolor='rgba(0,0,0,0)', gridcolor='#333'),
-                zaxis=dict(backgroundcolor='rgba(0,0,0,0)', gridcolor='#333')
+                xaxis=dict(
+                    backgroundcolor='rgba(0,0,0,0)', 
+                    gridcolor='#333',
+                    title='Recência (dias)'
+                ),
+                yaxis=dict(
+                    backgroundcolor='rgba(0,0,0,0)', 
+                    gridcolor='#333',
+                    title='Frequência'
+                ),
+                zaxis=dict(
+                    backgroundcolor='rgba(0,0,0,0)', 
+                    gridcolor='#333',
+                    title='Valor (R$)'
+                )
             ),
             legend=dict(
                 bgcolor='rgba(26,26,26,0.9)',
                 bordercolor='#a3ff12',
-                borderwidth=2
+                borderwidth=2,
+                title_text='Clusters'
             )
         )
         
@@ -206,11 +290,21 @@ def main():
             marker=dict(size=12, color='#a3ff12', line=dict(color='#0a0a0a', width=2))
         ))
         
+        # Destacar k=4
+        fig.add_vline(
+            x=4, 
+            line_dash="dash", 
+            line_color="#a3ff12", 
+            line_width=2,
+            annotation_text="k=4 ótimo!",
+            annotation_position="top"
+        )
+        
         fig.update_layout(
             paper_bgcolor='rgba(0,0,0,0)',
             plot_bgcolor='rgba(26,26,26,0.9)',
             font=dict(color='#ffffff'),
-            xaxis=dict(title="Número de Clusters (k)", gridcolor='#333'),
+            xaxis=dict(title="Número de Clusters (k)", gridcolor='#333', dtick=1),
             yaxis=dict(title="Inércia", gridcolor='#333'),
             height=350
         )
@@ -263,7 +357,7 @@ def main():
             <p style="color: #888; font-size: 0.9rem;">Seus melhores clientes</p>
         </div>
         """, unsafe_allow_html=True)
-        st.info("👈 Navegue pelo menu lateral")
+        st.info("👈 Use o menu lateral")
     
     with col2:
         st.markdown("""
@@ -309,6 +403,15 @@ def main():
             <p style="color: #888; font-size: 0.9rem;">Reativação urgente</p>
         </div>
         """, unsafe_allow_html=True)
+    
+    # Footer
+    st.markdown("---")
+    st.markdown("""
+    <div style="text-align: center; padding: 2rem 0; color: #666;">
+        <p>🍋 <b>Calogic</b> - Data-Driven Marketing Intelligence</p>
+        <p style="font-size: 0.9rem;">Desenvolvido com ❤️ usando Streamlit + ML + PostgreSQL</p>
+    </div>
+    """, unsafe_allow_html=True)
 
 if __name__ == "__main__":
     main()

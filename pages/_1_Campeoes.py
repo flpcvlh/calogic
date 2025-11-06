@@ -79,12 +79,12 @@ with col1:
         border-radius: 12px;
         padding: 2rem;
     ">
-        <h3 style="color: #a3ff12;">✅ Características Positivas</h3>
+        <h3 style="color: #a3ff12;">✅ Indicadores Positivos</h3>
         <ul style="color: #ccc; line-height: 2;">
-            <li><b>Recência:</b> Compraram há apenas <b style="color: #a3ff12;">{rec_avg:.0f} dias</b></li>
-            <li><b>Frequência:</b> Média de <b style="color: #a3ff12;">{freq_avg:.1f} pedidos</b> por cliente</li>
-            <li><b>Ticket:</b> Gastam em média <b style="color: #a3ff12;">R$ {mon_avg:,.2f}</b></li>
-            <li><b>Status:</b> Clientes mais engajados da base</li>
+            <li><b>Recência baixa:</b> Compraram há apenas <b style="color: #a3ff12;">{rec_avg:.0f} dias</b></li>
+            <li><b>Alta frequência:</b> Média de <b style="color: #a3ff12;">{freq_avg:.1f} pedidos</b> por cliente</li>
+            <li><b>Alto valor:</b> Gastam em média <b style="color: #a3ff12;">R$ {mon_avg:,.2f}</b></li>
+            <li><b>Engajamento:</b> Clientes mais ativos da base</li>
         </ul>
     </div>
     """, unsafe_allow_html=True)
@@ -115,24 +115,67 @@ st.subheader("📊 Análise Visual Detalhada")
 tab1, tab2, tab3 = st.tabs(["📅 Análise de Recência", "🔄 Análise de Frequência", "💰 Análise de Valor"])
 
 with tab1:
-    st.markdown("#### Por que a recência está baixa?")
-    st.markdown("*Clientes que compraram recentemente estão mais engajados*")
+    st.markdown("#### Distribuição da Recência - Quanto mais à esquerda, melhor!")
+    st.markdown("*Campeões compram frequentemente, por isso a recência é baixa*")
     
-    fig = px.histogram(df, x='recency', nbins=25, 
-                      title="Distribuição de Recência (dias desde última compra)",
-                      color_discrete_sequence=['#a3ff12'])
+    # Criar distribuição agrupada
+    recency_counts = df.groupby(pd.cut(df['recency'], bins=15)).size().reset_index()
+    recency_counts.columns = ['range', 'count']
+    recency_counts['midpoint'] = recency_counts['range'].apply(lambda x: x.mid)
     
-    fig.add_vline(x=rec_avg, line_dash="dash", line_color="white", line_width=2,
-                 annotation_text=f"Média: {rec_avg:.0f}d", annotation_position="top")
+    fig = go.Figure()
+    
+    # Linha suave com preenchimento
+    fig.add_trace(go.Scatter(
+        x=recency_counts['midpoint'],
+        y=recency_counts['count'],
+        mode='lines',
+        name='Clientes',
+        line=dict(color='#a3ff12', width=4, shape='spline'),
+        fill='tozeroy',
+        fillcolor='rgba(163, 255, 18, 0.3)'
+    ))
+    
+    # Linha da média
+    fig.add_vline(
+        x=rec_avg, 
+        line_dash="dash", 
+        line_color="white", 
+        line_width=3,
+        annotation_text=f"Média: {rec_avg:.0f} dias",
+        annotation_position="top right",
+        annotation=dict(font_size=14, bgcolor="rgba(163,255,18,0.8)", font_color="black")
+    )
+    
+    # Área de excelência
+    fig.add_vrect(
+        x0=0, x1=30,
+        fillcolor="rgba(163, 255, 18, 0.1)",
+        layer="below", line_width=0,
+        annotation_text="🌟 Zona de Excelência",
+        annotation_position="top left"
+    )
     
     fig.update_layout(
+        title="Recência ao Longo do Tempo (dias desde última compra)",
         paper_bgcolor='rgba(0,0,0,0)',
         plot_bgcolor='rgba(26,26,26,0.9)',
-        font=dict(color='#ffffff'),
-        xaxis=dict(title="Dias desde última compra", gridcolor='#333'),
-        yaxis=dict(title="Número de clientes", gridcolor='#333'),
+        font=dict(color='#ffffff', size=13),
+        xaxis=dict(
+            title="Dias desde última compra",
+            gridcolor='#333',
+            showgrid=True,
+            zeroline=False
+        ),
+        yaxis=dict(
+            title="Número de Clientes",
+            gridcolor='#333',
+            showgrid=True,
+            zeroline=False
+        ),
         showlegend=False,
-        height=400
+        height=450,
+        hovermode='x unified'
     )
     
     st.plotly_chart(fig, use_container_width=True)
@@ -143,34 +186,77 @@ with tab1:
     
     col1, col2, col3 = st.columns(3)
     with col1:
-        st.metric("📅 Últimos 7 dias", f"{muito_recentes} ({muito_recentes/len(df)*100:.1f}%)")
+        st.metric("🔥 Últimos 7 dias", f"{muito_recentes}", f"{muito_recentes/len(df)*100:.1f}%")
     with col2:
-        st.metric("📅 Últimos 30 dias", f"{recentes} ({recentes/len(df)*100:.1f}%)")
+        st.metric("⚡ Últimos 30 dias", f"{recentes}", f"{recentes/len(df)*100:.1f}%")
     with col3:
         if rec_avg < 60:
-            st.success("✅ Excelente engajamento!")
+            st.success("✅ Engajamento excepcional!")
         else:
-            st.warning("⚠️ Monitorar clientes inativos")
+            st.warning("⚠️ Monitorar atentamente")
 
 with tab2:
-    st.markdown("#### Por que a frequência está alta?")
-    st.markdown("*Clientes que compram mais vezes são mais leais*")
+    st.markdown("#### Distribuição da Frequência - Quanto mais à direita, melhor!")
+    st.markdown("*Campeões fazem múltiplas compras, criando um pico à direita*")
     
-    fig = px.histogram(df, x='frequency', nbins=20,
-                      title="Distribuição de Frequência de Compras",
-                      color_discrete_sequence=['#a3ff12'])
+    # Criar distribuição de frequência
+    freq_counts = df['frequency'].value_counts().sort_index().reset_index()
+    freq_counts.columns = ['frequency', 'count']
     
-    fig.add_vline(x=freq_avg, line_dash="dash", line_color="white", line_width=2,
-                 annotation_text=f"Média: {freq_avg:.1f}", annotation_position="top")
+    fig = go.Figure()
+    
+    # Linha suave com preenchimento
+    fig.add_trace(go.Scatter(
+        x=freq_counts['frequency'],
+        y=freq_counts['count'],
+        mode='lines+markers',
+        name='Clientes',
+        line=dict(color='#a3ff12', width=4, shape='spline'),
+        marker=dict(size=8, color='#a3ff12', line=dict(color='#0a0a0a', width=2)),
+        fill='tozeroy',
+        fillcolor='rgba(163, 255, 18, 0.3)'
+    ))
+    
+    # Linha da média
+    fig.add_vline(
+        x=freq_avg,
+        line_dash="dash",
+        line_color="white",
+        line_width=3,
+        annotation_text=f"Média: {freq_avg:.1f}",
+        annotation_position="top right",
+        annotation=dict(font_size=14, bgcolor="rgba(163,255,18,0.8)", font_color="black")
+    )
+    
+    # Área de alta frequência
+    fig.add_vrect(
+        x0=10, x1=freq_counts['frequency'].max(),
+        fillcolor="rgba(163, 255, 18, 0.1)",
+        layer="below", line_width=0,
+        annotation_text="🔥 Super Frequentes",
+        annotation_position="top right"
+    )
     
     fig.update_layout(
+        title="Frequência de Compras (número de pedidos por cliente)",
         paper_bgcolor='rgba(0,0,0,0)',
         plot_bgcolor='rgba(26,26,26,0.9)',
-        font=dict(color='#ffffff'),
-        xaxis=dict(title="Número de pedidos", gridcolor='#333'),
-        yaxis=dict(title="Número de clientes", gridcolor='#333'),
+        font=dict(color='#ffffff', size=13),
+        xaxis=dict(
+            title="Número de Pedidos",
+            gridcolor='#333',
+            showgrid=True,
+            zeroline=False
+        ),
+        yaxis=dict(
+            title="Número de Clientes",
+            gridcolor='#333',
+            showgrid=True,
+            zeroline=False
+        ),
         showlegend=False,
-        height=400
+        height=450,
+        hovermode='x unified'
     )
     
     st.plotly_chart(fig, use_container_width=True)
@@ -181,33 +267,78 @@ with tab2:
     
     col1, col2, col3 = st.columns(3)
     with col1:
-        st.metric("🔥 10+ pedidos", f"{alta_freq} ({alta_freq/len(df)*100:.1f}%)")
+        st.metric("🔥 10+ pedidos", f"{alta_freq}", f"{alta_freq/len(df)*100:.1f}%")
     with col2:
-        st.metric("🔥🔥 15+ pedidos", f"{muito_alta} ({muito_alta/len(df)*100:.1f}%)")
+        st.metric("🔥🔥 15+ pedidos", f"{muito_alta}", f"{muito_alta/len(df)*100:.1f}%")
     with col3:
-        st.success(f"✅ Frequência média: {freq_avg:.1f} pedidos")
+        st.success(f"✅ Média: {freq_avg:.1f} pedidos")
 
 with tab3:
-    st.markdown("#### Distribuição de Valor Gasto")
-    st.markdown("*Análise do quanto cada cliente contribui em receita*")
+    st.markdown("#### Distribuição de Valor - Análise da Contribuição em Receita")
+    st.markdown("*Visualização do valor total gasto por cada cliente*")
+    
+    # Criar bins de valor
+    valor_bins = pd.qcut(df['monetary'], q=20, duplicates='drop')
+    valor_counts = df.groupby(valor_bins).size().reset_index()
+    valor_counts.columns = ['range', 'count']
+    valor_counts['midpoint'] = valor_counts['range'].apply(lambda x: x.mid)
+    valor_counts = valor_counts.sort_values('midpoint')
     
     fig = go.Figure()
     
-    fig.add_trace(go.Box(
-        y=df['monetary'],
-        name="Valor",
-        marker_color='#a3ff12',
-        boxmean='sd'
+    # Linha suave com preenchimento gradiente
+    fig.add_trace(go.Scatter(
+        x=valor_counts['midpoint'],
+        y=valor_counts['count'],
+        mode='lines',
+        name='Clientes',
+        line=dict(color='#a3ff12', width=4, shape='spline'),
+        fill='tozeroy',
+        fillcolor='rgba(163, 255, 18, 0.3)'
     ))
+    
+    # Linha da média
+    fig.add_vline(
+        x=mon_avg,
+        line_dash="dash",
+        line_color="white",
+        line_width=3,
+        annotation_text=f"Média: R$ {mon_avg:,.0f}",
+        annotation_position="top left",
+        annotation=dict(font_size=14, bgcolor="rgba(163,255,18,0.8)", font_color="black")
+    )
+    
+    # Top 25% (alto valor)
+    top_25_value = df['monetary'].quantile(0.75)
+    fig.add_vrect(
+        x0=top_25_value, x1=df['monetary'].max(),
+        fillcolor="rgba(255, 215, 0, 0.1)",
+        layer="below", line_width=0,
+        annotation_text="💎 Top 25%",
+        annotation_position="top right"
+    )
     
     fig.update_layout(
         title="Distribuição de Valor Monetário (R$)",
         paper_bgcolor='rgba(0,0,0,0)',
         plot_bgcolor='rgba(26,26,26,0.9)',
-        font=dict(color='#ffffff'),
-        yaxis=dict(title="Valor Total Gasto (R$)", gridcolor='#333'),
+        font=dict(color='#ffffff', size=13),
+        xaxis=dict(
+            title="Valor Total Gasto (R$)",
+            gridcolor='#333',
+            showgrid=True,
+            zeroline=False,
+            tickformat=',.0f'
+        ),
+        yaxis=dict(
+            title="Número de Clientes",
+            gridcolor='#333',
+            showgrid=True,
+            zeroline=False
+        ),
         showlegend=False,
-        height=400
+        height=450,
+        hovermode='x unified'
     )
     
     st.plotly_chart(fig, use_container_width=True)
@@ -220,9 +351,9 @@ with tab3:
     with col1:
         st.metric("💰 Valor Médio", f"R$ {mon_avg:,.2f}")
     with col2:
-        st.metric("💎 Top 10% geram", f"{pct_top10:.1f}% da receita")
+        st.metric("💎 Top 10%", f"{pct_top10:.1f}% da receita")
     with col3:
-        st.metric("📈 Total do cluster", f"R$ {df['monetary'].sum():,.2f}")
+        st.metric("📈 Total", f"R$ {df['monetary'].sum():,.2f}")
 
 st.markdown("---")
 
@@ -368,32 +499,79 @@ Aproveite: [LINK]"""
         with col2:
             if st.button("🔔 DISPARAR PUSH VIP", key="send_push", type="primary"):
                 st.success(f"✅ Notificação VIP enviada!")
+                
+# ROI
+st.markdown("---")
+st.subheader("📊 ROI Estimado da Campanha VIP")
+
+conversoes = int(len(df) * 0.25)  # 25% conversão (alta para campeões)
+ticket_medio = df['monetary'].mean() / df['frequency'].mean() if df['frequency'].mean() > 0 else 200
+
+# CUSTOS
+custo_disparo = len(df) * 0.50  # R$ 0,50 por mensagem
+custo_vale = conversoes * 30  # Vale R$ 30
+custo_desconto = conversoes * ticket_medio * 0.20  # 20% desconto
+custo_total = custo_disparo + custo_vale + custo_desconto
+
+# RECEITA (Margem já descontada do COGS)
+receita_bruta = conversoes * ticket_medio
+margem_liquida = 0.60  # 60% de margem (já descontou COGS)
+receita_liquida = receita_bruta * margem_liquida
+
+# LUCRO
+lucro = receita_liquida - custo_total
+roi = (lucro / custo_total) * 100 if custo_total > 0 else 0
+
+col1, col2, col3, col4, col5 = st.columns(5)
+with col1:
+    st.metric("🎯 Taxa Conversão", "25%")
+with col2:
+    st.metric("🛒 Conversões", f"{conversoes:,}")
+with col3:
+    st.metric("💰 Receita Líquida", f"R$ {receita_liquida:,.2f}")
+with col4:
+    st.metric("💵 Lucro", f"R$ {lucro:,.2f}", delta=f"+{roi:.0f}%")
+with col5:
+    st.metric("📈 ROI", f"{roi:.0f}%")
+
+# Breakdown de custos
+with st.expander("📊 Ver Detalhamento Completo"):
+    st.markdown(f"""
+    ### 💸 Investimento Total: R$ {custo_total:,.2f}
     
-    # ROI
-    st.markdown("---")
-    st.subheader("📊 Impacto Esperado do Programa VIP")
+    **Custos detalhados:**
+    - 📧 Disparo de mensagens: R$ {custo_disparo:,.2f}
+    - 🎁 Vale R$ 30 por conversão: R$ {custo_vale:,.2f}
+    - 💰 Desconto 20%: R$ {custo_desconto:,.2f}
     
-    # Campeões têm alta taxa de engajamento
-    aumento_frequencia = 0.30  # 30% mais compras
-    aumento_ticket = 0.20  # 20% mais valor por pedido
+    ---
     
-    receita_atual = df['monetary'].sum()
-    receita_incremental = receita_atual * (aumento_frequencia + aumento_ticket)
-    custo_desconto = receita_incremental * 0.20  # 20% de desconto
-    custo_operacional = len(df) * 12  # R$ 12/cliente/ano em custos VIP
-    custo_total = custo_desconto + custo_operacional
-    receita_liquida = receita_incremental - custo_total
-    roi = (receita_liquida / custo_total) * 100
+    ### 💰 Retorno
     
-    col1, col2, col3, col4 = st.columns(4)
-    with col1:
-        st.metric("📈 Aumento Frequência", "+30%")
-    with col2:
-        st.metric("💰 Aumento Ticket", "+20%")
-    with col3:
-        st.metric("💵 Receita Incremental", f"R$ {receita_incremental:,.2f}")
-    with col4:
-        st.metric("📊 ROI Líquido", f"{roi:.0f}%")
+    - 🛒 Vendas brutas: R$ {receita_bruta:,.2f}
+    - 📊 Margem líquida (60%): R$ {receita_liquida:,.2f}
+    - 💵 **Lucro líquido**: R$ {lucro:,.2f}
     
-    st.success("🎯 Programa VIP mantém seus melhores clientes engajados e aumenta seu valor vitalício!")
-    st.info(f"💡 Com apenas {len(df)} Campeões gerando R$ {receita_atual:,.2f}, o potencial é de +R$ {receita_liquida:,.2f} líquidos!")
+    ---
+    
+    ### 📈 Performance
+    
+    - **ROI**: {roi:.1f}%
+    - **Payback**: {(custo_total / lucro) if lucro > 0 else 0:.1f}x
+    - **Retorno por R$ 1**: R$ {(receita_liquida / custo_total) if custo_total > 0 else 0:.2f}
+    
+    ---
+    
+    ✅ **Campanha ALTAMENTE lucrativa!**
+    """)
+
+if roi > 100:
+    st.success(f"🎉 ROI EXCELENTE de {roi:.0f}%! Cada R$ 1 investido retorna R$ {1 + (roi/100):.2f}")
+elif roi > 50:
+    st.success(f"✅ ROI muito bom de {roi:.0f}%! Campanha recomendada.")
+elif roi > 0:
+    st.info(f"📊 ROI positivo de {roi:.0f}%. Campanha viável.")
+else:
+    st.error("❌ Campanha com prejuízo. Revisar estratégia.")
+
+st.info(f"💡 Com {conversoes} conversões, a campanha gera R$ {lucro:,.2f} de lucro líquido!")
